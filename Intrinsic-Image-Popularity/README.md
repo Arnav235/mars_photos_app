@@ -1,0 +1,2 @@
+#Intrinsic image popularity Assessment  
+This code was taken from [this](https://github.com/dingkeyan93/Intrinsic-Image-Popularity) repository, which is the implementation of the paper [Intrinsic Image Popularity Assessment](https://arxiv.org/abs/1907.01985)

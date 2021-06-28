@@ -1,0 +1,5 @@
+for f in ../MAST/*; 
+do 
+	python -W ignore test.py --image_path $f; 
+	echo $f; 
+done
