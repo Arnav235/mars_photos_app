@@ -1,8 +1,9 @@
 import json
 import requests
-from flask import escape
-from google.cloud import storage
-import requests
+from flask import escape, Flask
+from google.cloud import storage, firestore
+firestore_db = firestore.Client()
+
 from datetime import date, timedelta
 import ast
 import logging
@@ -17,8 +18,6 @@ from PIL import Image, ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 import glob
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# NEED TO DELETE SMALL PHOTOS (MAYBE THOSE <200px)
 
 def download_model_from_gcloud(bucket_name, object_path, local_download_path):
     storage_client = storage.Client()
@@ -90,8 +89,8 @@ def make_predictions(earth_date=None):
         for url in urls_by_camera["MAST"]:
             image = Image.open(requests.get(url, stream=True).raw)
             if image.size[0] > 200 and image.size[1] > 200:
-                photos_dict["MAST"].append([url, predict_image_score(image, model)])
-        photos_dict["MAST"] = sorted(photos_dict["MAST"], key = lambda x: x[1], reverse=True)
+                photos_dict["MAST"].append( {"url":url, "score":predict_image_score(image, model)} )
+        photos_dict["MAST"] = sorted(photos_dict["MAST"], key = lambda x: x["score"], reverse=True)
         del urls_by_camera["MAST"]
         log.info("Finished getting predictions on the MAST images")
 
@@ -101,17 +100,19 @@ def make_predictions(earth_date=None):
         for url in urls_by_camera["NAVCAM"]:
             image = Image.open(requests.get(url, stream=True).raw)
             if image.size[0] > 200 and image.size[1] > 200:
-                photos_dict["NAVCAM"].append([url, predict_image_score(image, model)])
-        photos_dict["NAVCAM"] = sorted(photos_dict["NAVCAM"], key = lambda x: x[1], reverse=True)
+                photos_dict["NAVCAM"].append( {"url":url, "score":predict_image_score(image, model)} )
+        photos_dict["NAVCAM"] = sorted(photos_dict["NAVCAM"], key = lambda x: x["score"], reverse=True)
         del urls_by_camera["NAVCAM"]
         log.info("Finished getting predictions on the NAVCAM images")
 
     for camera in urls_by_camera:
         photos_dict[camera] = urls_by_camera[camera]
     
+    firestore_db.collection("mars_img_url_scores").document(earth_date).set(photos_dict)
     return photos_dict
 
 def get_images(request):
+    earth_date = "2021-06-22"
     """Responds to any HTTP request.
     Args:
         request (flask.Request): HTTP request object.
@@ -120,17 +121,16 @@ def get_images(request):
         Response object using
         `make_response <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>`.
     """
+
     request_json = request.get_json()
-    if request.args and 'message' in request.args:
-        return request.args.get('message')
-    elif request_json and 'message' in request_json:
-        return request_json['message']
+    earth_date = request_json["earth_date"]
+    firebase_doc = firestore_db.collection("mars_img_url_scores").document(earth_date).get()
+
+    if firebase_doc.exists:
+        return firebase_doc.to_dict()
     else:
-        return f'Hello World!'
+        return make_predictions(earth_date)
 
-    
-
-# print(make_predictions())
 
 # download_model("mars_images_scoring_model", "model-resnet50.pth", "/Users/Arnav/Desktop/code/HTML/mars_photos_app/model.pth")
 
