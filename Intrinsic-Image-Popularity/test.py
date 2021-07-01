@@ -29,7 +29,7 @@ if __name__ == '__main__':
     config = parser.parse_args()
     image = Image.open(config.image_path)
     model = torchvision.models.resnet50()
-    # model.avgpool = nn.AdaptiveAvgPool2d(1) # for any size of the input
+    # model.avgpool = torch.nn.AdaptiveAvgPool2d(1) # for any size of the input
     model.fc = torch.nn.Linear(in_features=2048, out_features=1)
     model.load_state_dict(torch.load('model/model-resnet50.pth', map_location=device)) 
     model.eval().to(device)
