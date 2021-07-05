@@ -1,6 +1,12 @@
+import os
+
+from flask import Flask
+
+app = Flask(__name__)
+
 import json
 import requests
-from flask import escape, Flask
+from flask import escape
 from google.cloud import storage, firestore
 firestore_db = firestore.Client()
 
@@ -66,11 +72,12 @@ def predict_image_score(image, model):
         preds = model(image)
     return preds.item()
 
+@app.route("/")
 def make_predictions(earth_date=None):
-    download_model_from_gcloud("mars_images_scoring_model","model-resnet50.pth", "/tmp/model.pth")
+    download_model_from_gcloud("mars_images_scoring_model","model-resnet50.pth", "model.pth")
     model = torchvision.models.resnet50()
     model.fc = torch.nn.Linear(in_features=2048, out_features=1)
-    model.load_state_dict(torch.load("/tmp/model.pth", map_location=device)) 
+    model.load_state_dict(torch.load("model.pth", map_location=device)) 
     model.eval().to(device)
 
     if earth_date==None:
@@ -109,44 +116,15 @@ def make_predictions(earth_date=None):
         photos_dict[camera] = urls_by_camera[camera]
     
     firestore_db.collection("mars_img_url_scores").document(earth_date).set(photos_dict)
-    return photos_dict
+    return ("Sucessfully updated the firebase database!")
 
-def get_images(request):
-    earth_date = "2021-06-22"
-    """Responds to any HTTP request.
-    Args:
-        request (flask.Request): HTTP request object.
-    Returns:
-        The response text or any set of values that can be turned into a
-        Response object using
-        `make_response <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>`.
-    """
-
-    request_json = request.get_json()
-    earth_date = request_json["earth_date"]
-    firebase_doc = firestore_db.collection("mars_img_url_scores").document(earth_date).get()
-
-    if firebase_doc.exists:
-        return firebase_doc.to_dict()
-    else:
-        return make_predictions(earth_date)
-
-
-# download_model("mars_images_scoring_model", "model-resnet50.pth", "/Users/Arnav/Desktop/code/HTML/mars_photos_app/model.pth")
-
-# print(make_predictions("2021-06-30"))
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
 
 """
-Framework for the backend server:
-
-The frontend just calls the API
-If the Server doesn't have that day's top 20 images
-    the Server fetches all of the images from the NASA API
-    the server downloads all of the corresponding images (do this asynchronously) 
-    the server runs the pytorch model on each photo (do this asynchronously)
-    once the server has the scores for all of the images, it stores the scores somewhere (maybe a JSON)
-    the server then returns a JSON with the top 20 images(their URLs) and their corresponding scores
-
-Else if the server has the day's top 20 images
-    the server returns the JSON (URLs of the top images + their scores) for the day
-"""    
+Things to do
+ Setup a key in the get request that authenticates the user
+ Allow a post request to be sent to the endpoint with a specific date
+ Setup automatic updating of photos from the previous five days
+ Setup a top 20 photos of all time and top 20 photos of each month
+"""
