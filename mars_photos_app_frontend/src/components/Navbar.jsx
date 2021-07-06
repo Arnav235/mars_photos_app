@@ -8,7 +8,12 @@ function Navbar() {
 
   return (
     <div className="flex justify-between">
-      <h1 className="text-2xl font-bold">Mars Photo App</h1>
+      <h1
+        className="text-4xl font-bold cursor-pointer"
+        onClick={() => window.location.reload()}
+      >
+        Mars Photo App
+      </h1>
       <h1 className="text-2xl font-bold">
         Today's Date: {`${month}/${day}/${year}`}
       </h1>
