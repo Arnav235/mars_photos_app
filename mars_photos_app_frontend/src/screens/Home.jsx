@@ -11,6 +11,7 @@ function Home() {
   const updateCategory = (updatedIndex) => {
     setCategoryIndex(updatedIndex);
   };
+
   return (
     <div className="bg-yellow-100 min-h-screen flex flex-col font-mono">
       <div className="flex flex-col p-10">
