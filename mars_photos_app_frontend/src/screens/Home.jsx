@@ -24,7 +24,7 @@ function Home() {
           />
         </div>
       </div>
-      <Footer />
+      <Footer updateCategory={updateCategory} />
     </div>
   );
 }
