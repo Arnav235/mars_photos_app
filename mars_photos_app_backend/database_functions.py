@@ -27,6 +27,7 @@ def get_document_with_condition(collection, field, operator, value):
 # add_data("users", "Roger", {"name":"Roger", "sport":"Tennis"})
 # add_data("users", "Allison", {"name":"Allison", "sport":"Soccer"})
 # add_data("users", "Kara", {"name":"Kara", "sport":"Hockey"})
+add_data("top_20", "MAST_all_time", {"images":[{"score":-2}] * 20})
+add_data("top_20", "NAVCAM_all_time", {"images":[{"score":-2}] * 20})
 
-add_data("users", "Arnav", {"name":"Arnav", "sport":"badminton"})
 # get_document_with_condition("users", "sport", "==", "Tennis")
