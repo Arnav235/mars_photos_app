@@ -15,14 +15,22 @@ function Home() {
   };
 
   useEffect(() => {
-    axios
-      .post(
+    const fetchData = async () => {
+      const dateData = await axios.get(
+        "https://us-central1-mars-photos-318319.cloudfunctions.net/get_mars_photos"
+      );
+
+      const pictureData = await axios.post(
         "https://us-central1-mars-photos-318319.cloudfunctions.net/get_mars_photos",
-        { earth_date: "2021-06-28" }
-      )
-      .then(({ data }) => setPicData(data))
-      .catch((error) => console.log(error));
+        { earth_date: dateData.data }
+      );
+
+      setPicData(pictureData.data);
+    };
+    fetchData();
   }, []);
+
+  console.log("Hi");
 
   return (
     <div className="bg-yellow-100 min-h-screen flex flex-col font-mono">
