@@ -3,6 +3,7 @@ import requests
 from flask import escape, Flask
 from datetime import datetime, timedelta
 from google.cloud import storage, firestore
+from flask_cors import cross_origin
 firestore_db = firestore.Client()
 
 # This function loops through documents in the cloud firestore db and returns 
@@ -18,6 +19,7 @@ def most_recent_date_in_firestore():
     return date_str
 
 # This is the main function that handles incoming POST and GET requests
+@cross_origin()
 def get_images(request):
     if request.method == "GET":
         return most_recent_date_in_firestore()
