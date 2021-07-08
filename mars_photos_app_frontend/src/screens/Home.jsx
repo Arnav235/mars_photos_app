@@ -7,11 +7,10 @@ import Footer from "../components/Footer";
 import axios from "axios";
 
 function Home() {
-  const categories = ["FHAZ", "MAST", "NAVCAM", "RHAZ"];
-  const [categoryIndex, setCategoryIndex] = useState(0);
   const [picData, setPicData] = useState(null);
-  const updateCategory = (updatedIndex) => {
-    setCategoryIndex(updatedIndex);
+  const [category, setCategory] = useState(null);
+  const updateCategory = (updatedCategory) => {
+    setCategory(updatedCategory);
   };
 
   useEffect(() => {
@@ -26,23 +25,22 @@ function Home() {
       );
 
       setPicData(pictureData.data);
+      setCategory(Object.keys(pictureData.data)[0]);
     };
     fetchData();
   }, []);
 
   console.log("Hi");
-
   return (
     <div className="bg-yellow-100 min-h-screen flex flex-col font-mono">
       <div className="flex flex-col p-10">
         <Navbar />
         <div className="flex">
-          <Sidebar updateCategory={updateCategory} />
-          {picData !== null && (
-            <Gallery
-              pictureData={picData}
-              category={categories[categoryIndex]}
-            />
+          {picData !== null && category !== null && (
+            <>
+              <Sidebar updateCategory={updateCategory} picData={picData} />
+              <Gallery pictureData={picData} category={category} />
+            </>
           )}
         </div>
       </div>

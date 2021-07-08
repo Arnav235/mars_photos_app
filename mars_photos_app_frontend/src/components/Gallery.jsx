@@ -2,6 +2,7 @@ import React from "react";
 
 function Gallery({ pictureData, category }) {
   const pictureLinks = pictureData[category];
+  console.log(category);
 
   return (
     <div className="w-full ml-10 pt-5 flex items-center justify-center flex-wrap">
