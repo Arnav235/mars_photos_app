@@ -12,7 +12,7 @@ function Navbar() {
         className="text-4xl font-bold cursor-pointer"
         onClick={() => window.location.reload()}
       >
-        Mars Photo App
+        Rovr
       </h1>
       <h1 className="text-2xl font-bold">
         Today's Date: {`${month}/${day}/${year}`}

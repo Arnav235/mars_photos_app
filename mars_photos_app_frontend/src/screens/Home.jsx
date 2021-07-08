@@ -40,11 +40,11 @@ function Home() {
             <>
               <Sidebar updateCategory={updateCategory} picData={picData} />
               <Gallery pictureData={picData} category={category} />
+              <Footer updateCategory={updateCategory} picData={picData} />
             </>
           )}
         </div>
       </div>
-      <Footer updateCategory={updateCategory} />
     </div>
   );
 }
