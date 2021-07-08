@@ -1,5 +1,6 @@
 import React from "react";
 
+//dynamically gets the picture data keys and renders them as sidebar categories
 function Sidebar({ updateCategory, picData }) {
   return (
     <div className="flex flex-col mt-10 text-lg">

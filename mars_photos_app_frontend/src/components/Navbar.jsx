@@ -1,5 +1,6 @@
 import React from "react";
 
+//renders a navbar which shows the date and the project name(Rovr)
 function Navbar() {
   var today = new Date();
   var day = String(today.getDate()).padStart(2, "0");

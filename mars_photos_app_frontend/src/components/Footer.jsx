@@ -1,5 +1,6 @@
 import React from "react";
 
+//renders a footer which goes back to the first category or reloads the page if needed
 function Footer({ updateCategory, picData }) {
   return (
     <div className="flex p-10 justify-between fixed left-0 bottom-0 w-screen h-10">

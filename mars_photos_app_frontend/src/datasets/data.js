@@ -1,3 +1,4 @@
+//the hardcoded api data on a single day
 const data = {
   CHEMCAM: [
     "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/03163/opgs/edr/ccam/CR0_678286536EDR_F0891862CCAM02163M_.JPG",

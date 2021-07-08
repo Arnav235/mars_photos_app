@@ -1,5 +1,6 @@
 import React from "react";
 
+// takes a certain category and renders an image given an image link in the array
 function Gallery({ pictureData, category }) {
   const pictureLinks = pictureData[category];
   console.log(category);

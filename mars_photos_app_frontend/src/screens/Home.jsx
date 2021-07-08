@@ -6,6 +6,7 @@ import Footer from "../components/Footer";
 
 import axios from "axios";
 
+//home screen when the user enters
 function Home() {
   const [picData, setPicData] = useState(null);
   const [category, setCategory] = useState(null);
@@ -15,15 +16,18 @@ function Home() {
 
   useEffect(() => {
     const fetchData = async () => {
+      // gets the date
       const dateData = await axios.get(
         "https://us-central1-mars-photos-318319.cloudfunctions.net/get_mars_photos"
       );
 
+      //uses the date to get picture link data
       const pictureData = await axios.post(
         "https://us-central1-mars-photos-318319.cloudfunctions.net/get_mars_photos",
         { earth_date: dateData.data }
       );
 
+      //sets the picture data and the category of the first key present in the picture data object
       setPicData(pictureData.data);
       setCategory(Object.keys(pictureData.data)[0]);
     };
