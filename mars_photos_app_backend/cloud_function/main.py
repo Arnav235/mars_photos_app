@@ -26,20 +26,30 @@ def get_images(request):
 
     if request.method == "POST":
         request_json = request.get_json()
+
+        if "earth_date" in request_json and "top_20" in request_json:
+            return "Both earth_date and top_20 are in your POST request. You can only have one of the two variables. Choose one!"
+
         if "earth_date" in request_json:
             earth_date = request_json["earth_date"]
-            firebase_doc = firestore_db.collection("mars_img_url_scores").document(earth_date).get()
-
-            if firebase_doc.exists:
-                return firebase_doc.to_dict()
+            if type(earth_date) is str:
+                firebase_doc = firestore_db.collection("mars_img_url_scores").document(earth_date).get()
+                if firebase_doc.exists:
+                    return firebase_doc.to_dict()
+                else:
+                    return "This document does not exist"
             else:
-                return "This document does not exist"
+                return "The earth_date object must be a string" 
         
         if "top_20" in request_json:
             top_20_doc = request_json["top_20"]
-            firebase_doc = firestore_db.collection("top_20").document(top_20_doc).get()
 
-            if firebase_doc.exists:
-                return firebase_doc.to_dict()
+            if type(top_20_doc) is str:
+                firebase_doc = firestore_db.collection("top_20").document(top_20_doc).get()
+
+                if firebase_doc.exists:
+                    return firebase_doc.to_dict()
+                else:
+                    return "This document does not exist in top_20"
             else:
-                return "This document does not exist in top_20"
+                return "The top_20 object must be a string" 
