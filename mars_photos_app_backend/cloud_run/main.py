@@ -35,7 +35,7 @@ def download_model_from_gcloud(bucket_name, object_path, local_download_path):
     blob.download_to_filename(local_download_path)
     log.info("Downloaded model")
 
-# This function loads the Pytorch model stored at local_model_path. It returns a model object
+# This function loads the Pytorch model stored at local_model_path. It returns a pytorch model object
 def load_model(local_model_path):
     download_model_from_gcloud("mars_images_scoring_model","model-resnet50.pth", local_model_path)
     model = torchvision.models.resnet50()
@@ -46,26 +46,29 @@ def load_model(local_model_path):
     return model
 
 # This function fetches the Mars photos taken on the date earth_date. It then extracts all of the image URLs
-# and compies them to a JSON where they're organized by camera name --> {"Camera_name": [url1, url2...]}. This JSON is returned
+# and copies them to a JSON where they're organized by camera name --> {"Camera_name": [url1, url2...]}. 
+# This JSON is returned
 def get_images_by_camera(earth_date):
 
-    log.debug("Getting photos for {} from API".format(earth_date))
     nasa_api_url = "https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos?earth_date={}&api_key={}".format(earth_date, nasa_api_key)
 
     #getting the response
     response = requests.get(nasa_api_url)
     unprocessed_photos = ast.literal_eval( response.content.decode("UTF-8") )['photos']
     
+    # here we loop through all of the photos, get their urls and put that in processed_photos
     processed_photos = {}
     for photo in unprocessed_photos:
         camera_name = photo["camera"]["name"]
         if camera_name in processed_photos:
-            processed_photos[camera_name].append(photo["img_src"])
+            # if the camera name is not a key in processed_photos, then we add, and make it's value equal to an array of urls
+            processed_photos[camera_name].append(photo["img_src"]) 
         else:
             processed_photos[camera_name] = [photo["img_src"]]
 
     return processed_photos
 
+# function taken from the paper. It prepares images before the pytorch model makes predictions on them
 def prepare_image(image):
     if image.mode != 'RGB':
         image = image.convert("RGB")
@@ -77,13 +80,14 @@ def prepare_image(image):
     image = image.unsqueeze(0)
     return image.to(device)
 
+# function taken from paper. This function takes an image and pytorch model object, and returns the score of the image
 def predict_image_score(image, model):
     image = prepare_image(image)
     with torch.no_grad():
         preds = model(image)
     return preds.item()
 
-# 
+# function makes new predictions on photos from a specific date, and updates the firestore db with those predictions 
 def make_predictions(earth_date=None, model=None):
     log.info("Running make_predictions() function")
     if model==None:
@@ -93,39 +97,42 @@ def make_predictions(earth_date=None, model=None):
         response = requests.get("https://api.nasa.gov/mars-photos/api/v1/manifests/curiosity?&api_key=DEMO_KEY")
         earth_date = ast.literal_eval( response.content.decode("UTF-8") )['photo_manifest']['max_date']
 
-    urls_by_camera = get_images_by_camera(earth_date)
+    urls_by_camera = get_images_by_camera(earth_date) # get urls of all photos taken on earth_date, organized by camera
     log.info("Got urls of all images")
     photos_dict = {}
 
-    # here we loop through all of the MAST photos and get predictions on them
     if "MAST" in urls_by_camera:
         log.info("MAST is in the urls dictionary")
-        photos_dict = get_camera_predictions("MAST", photos_dict, urls_by_camera, model, earth_date)
+        photos_dict = get_camera_predictions("MAST", photos_dict, urls_by_camera, model, earth_date) # make predictions on urls from API and add those to photos_dict
         del urls_by_camera["MAST"]
 
     if "NAVCAM" in urls_by_camera:
         log.info("NAVCAM is in the URLs dictionary")
-        photos_dict = get_camera_predictions("NAVCAM", photos_dict, urls_by_camera, model, earth_date)
+        photos_dict = get_camera_predictions("NAVCAM", photos_dict, urls_by_camera, model, earth_date) # make predictions on urls from API and add those to photos_dict
         del urls_by_camera["NAVCAM"]
 
+    # take the urls of images taken from all other cameras and add them to photos_dict
     for camera in urls_by_camera:
         photos_dict[camera] = urls_by_camera[camera]
     
-    firestore_db.collection("mars_img_url_scores").document(earth_date).set(photos_dict)
+    firestore_db.collection("mars_img_url_scores").document(earth_date).set(photos_dict) # add photos_dict to the firestore db
     log.info("Finished making new predictions for date: " + earth_date)
     return ("Success")
 
 # This function checks if any of the images in firestore_obj[camera_name] are in the top 20
 # images of the month or all time
 def check_top_20(firestore_obj, camera_name, earth_date):
+    # Get the top photos of the month and top all time photos
     top_20_month_db = firestore_db.collection("top_20").document(camera_name + "_" + earth_date[:-3]).get()
     top_20_all_time = firestore_db.collection("top_20").document(camera_name + "_all_time").get().to_dict()
 
-    if not top_20_month_db.exists:
+    if not top_20_month_db.exists: # if a document doesn't exist with the top photos of the month, we create one
         top_20_month_db = {"images":[{"score":-2}] * 20}
     else: top_20_month_db = top_20_month_db.to_dict()
 
+    # loop through all of the photos for which the model recently made predictions
     for img in firestore_obj[camera_name]:
+        # if the image's score is better than the worst photo in the top20 photos of the month or all time, then the worst photos is replaced with this one
         if img["score"] > top_20_all_time["images"][19]["score"]:
             top_20_all_time["images"][19] = {"url":img["url"], "date":earth_date, "score":img["score"]}
             top_20_all_time["images"] = sorted(top_20_all_time["images"], key = lambda x: x["score"], reverse=True)
@@ -133,8 +140,11 @@ def check_top_20(firestore_obj, camera_name, earth_date):
             top_20_month_db["images"][19] = {"url":img["url"], "date":earth_date, "score":img["score"]}
             top_20_month_db["images"] = sorted(top_20_month_db["images"], key = lambda x: x["score"], reverse=True) 
         else:
-            break
+            # the imgs in firestore_obj are sorted from best to worst, so if a certain photo isn't as good as the 
+            # worst photo in the top20 lists, then non of the consecutive photos will be. So we break the loop
+            break 
     
+    # updating the firestore dbs
     firestore_db.collection("top_20").document(camera_name + "_" + earth_date[:-3]).set(top_20_month_db)
     firestore_db.collection("top_20").document(camera_name + "_all_time").set(top_20_all_time)
     log.info("Finished check_top_20 for camera: " + camera_name + " for date: " + earth_date)
@@ -169,6 +179,8 @@ def update_camera_predictions(camera_name, firestore_obj, api_obj, model, earth_
     check_top_20(firestore_obj, camera_name, earth_date)
     return firestore_obj
 
+# this function makes predictions on all photos on the most recent date, then looks at the previous five days and 
+# checks if any new photos have been added for them. If they have, then the function updates those firestore documents
 def update_firestore_db():
     log.info("update_firestore_db() function called")
     response = requests.get("https://api.nasa.gov/mars-photos/api/v1/manifests/curiosity?&api_key=DEMO_KEY")
@@ -205,6 +217,7 @@ def update_firestore_db():
         firestore_db.collection("mars_img_url_scores").document(earth_date).set(firestore_photos)
         log.info("Successfully updated the firestore document for date {}".format(earth_date))
 
+# the flask router to take requests
 @app.route("/")
 def fetch_handler():
     log.info("Recieved a request")

@@ -1,3 +1,5 @@
+# This file contains functions to add, delete and access documents in the cloud firestore database
+
 from google.cloud import firestore
 import requests
 
@@ -24,12 +26,7 @@ def get_document_with_condition(collection, field, operator, value):
     for doc in query_result:
         print (doc.to_dict())
 
-# add_data("users", "Mihir", {"name":"Mihir", "sport":"basketball"})
-# add_data("users", "Roger", {"name":"Roger", "sport":"Tennis"})
-# add_data("users", "Allison", {"name":"Allison", "sport":"Soccer"})
-# add_data("users", "Kara", {"name":"Kara", "sport":"Hockey"})
-# get_document_with_condition("users", "sport", "==", "Tennis")
-
+# This function invokes the script on Cloud Run with a specific set of dates
 def make_cloud_run_predict():
     for i in range(14, 1, -1):
         date = "2021-06-" + "{0:0=2d}".format(i)

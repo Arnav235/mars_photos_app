@@ -1,3 +1,5 @@
+// This script downloads photos taken on a specific date from the NASA API onto one's local machine
+
 var fs = require('fs'),
 request = require('request');
 const fetch = require("isomorphic-fetch")
@@ -9,7 +11,8 @@ const download = function(uri, filename, callback){
   });
 };
 
-const url = "https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos?earth_date=2021-6-22&api_key=n8zqHczABgNKMwlvNmFInOXUa3IILc3jvevTYriF"
+const earth_date = "2021-06-22"
+const url = `https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos?earth_date=${earth_date}&api_key=n8zqHczABgNKMwlvNmFInOXUa3IILc3jvevTYriF1`
 
 async function main(){
 	let filtered_image_json = {}
