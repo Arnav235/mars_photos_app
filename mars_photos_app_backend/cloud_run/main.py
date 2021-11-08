@@ -165,6 +165,8 @@ def get_camera_predictions(camera_name, firestore_obj, api_obj, model, earth_dat
 # function returns the firestore object with an updated array for the camera_name key
 def update_camera_predictions(camera_name, firestore_obj, api_obj, model, earth_date):
     firestore_camera_urls_arr = []
+    new_photos = {}
+    new_photos[camera_name] = []
     for obj in firestore_obj[camera_name]:
         firestore_camera_urls_arr.append(obj["url"])
     
@@ -172,11 +174,13 @@ def update_camera_predictions(camera_name, firestore_obj, api_obj, model, earth_
         if url not in firestore_camera_urls_arr:
             image = Image.open(requests.get(url, stream=True).raw)
             if image.size[0] > 200 and image.size[1] > 200:
-                firestore_obj[camera_name].append( {"url":url, "score":predict_image_score(image, model)} )
+                new_photos[camera_name].append( {"url":url, "score":predict_image_score(image, model)} )
     
+    firestore_obj[camera_name] = firestore_obj[camera_name] + new_photos[camera_name]
     firestore_obj[camera_name] = sorted(firestore_obj[camera_name], key = lambda x: x["score"], reverse=True)
+    new_photos[camera_name] = sorted(new_photos[camera_name], key = lambda x: x["score"], reverse=True)
     log.info("Finished updating predictions on camera: " + camera_name + " for date: " + earth_date)
-    check_top_20(firestore_obj, camera_name, earth_date)
+    check_top_20(new_photos, camera_name, earth_date)
     return firestore_obj
 
 # this function makes predictions on all photos on the most recent date, then looks at the previous five days and 
@@ -199,6 +203,10 @@ def update_firestore_db():
         log.info("***Updating predictions for date: " + earth_date)
         api_photos = get_images_by_camera(earth_date)
         firestore_photos = firestore_db.collection("mars_img_url_scores").document(earth_date).get().to_dict()
+        if firestore_photos == None:
+            make_predictions(earth_date, model)
+            log.info("Photos did not exist in the firestore database for date: " + earth_date)
+            continue
         log.info("Got API photos and firestore photos")
 
         for key in api_photos:

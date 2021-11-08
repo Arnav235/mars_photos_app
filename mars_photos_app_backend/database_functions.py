@@ -28,9 +28,11 @@ def get_document_with_condition(collection, field, operator, value):
 
 # This function invokes the script on Cloud Run with a specific set of dates
 def make_cloud_run_predict():
-    for i in range(14, 1, -1):
-        date = "2021-06-" + "{0:0=2d}".format(i)
+    api_key = open("../nasa_api_key.txt", mode="r").read()
+    for i in range(7, 1, -1):
+        date = "2021-11-" + "{0:0=2d}".format(i)
         print("Making prediction on date: " + date)
-        requests.get("https://marspredictions-b6q4ckctha-uc.a.run.app?api_key=n8zqHczABgNKMwlvNmFInOXUa3IILc3jvevTYriF&earth_date={}".format(date))
+        requests.get("https://marspredictions-b6q4ckctha-uc.a.run.app?api_key={}&earth_date={}".format(api_key, date))
         print("Finished making prediction on date: " + date)
 
+make_cloud_run_predict()
