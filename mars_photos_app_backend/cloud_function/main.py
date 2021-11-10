@@ -24,32 +24,36 @@ def get_images(request):
     if request.method == "GET":
         return most_recent_date_in_firestore() # returns the most recent date for which firestore has data
 
+    # If a POST request is recieved, the function returns a dictionary with the photos from the date earth_date
+    # and the top all time photos and top photos of the month for NAVCAM and MAST cameras
     if request.method == "POST":
         request_json = request.get_json()
 
-        if "earth_date" in request_json and "top_20" in request_json:
-            return "Both earth_date and top_20 are in your POST request. You can only have one of the two variables. Choose one!", 400
+        if "earth_date" not in request_json:
+            return "earth_date parameter not specified"
 
-        if "earth_date" in request_json:
-            earth_date = request_json["earth_date"]
-            if type(earth_date) is str:
-                firebase_doc = firestore_db.collection("mars_img_url_scores").document(earth_date).get()
-                if firebase_doc.exists:
-                    return firebase_doc.to_dict()
-                else:
-                    return "This document does not exist", 400
-            else:
-                return "The earth_date object must be a string", 400 
+        earth_date = request_json["earth_date"]
+
+        # Ensuring that earth_date is formatted correctly
+        try:
+            datetime.strptime(earth_date, "%Y-%m-%d")
+        except:
+            return "The earth_date string is not formatted accuratly"
+
+        return_dict = {} 
+        firebase_doc = firestore_db.collection("mars_img_url_scores").document(earth_date).get()
+        if firebase_doc.exists:
+            return_dict = firebase_doc.to_dict()
+        else:
+            return "This document does not exist", 400
         
-        if "top_20" in request_json:
-            top_20_doc = request_json["top_20"]
+        # getting the top documents
+        return_dict["MAST_top20_overall"] = firestore_db.collection("top_20").document("MAST_all_time").get().to_dict()["images"]
+        return_dict["NAVCAM_top20_overall"] = firestore_db.collection("top_20").document("NAVCAM_all_time").get().to_dict()["images"]
+        return_dict["MAST_top20_month"] = firestore_db.collection("top_20").document("MAST_" + earth_date[:-3]).get().to_dict()["images"]
+        return_dict["NAVCAM_top20_month"] = firestore_db.collection("top_20").document("NAVCAM_" + earth_date[:-3]).get().to_dict()["images"]
 
-            if type(top_20_doc) is str:
-                firebase_doc = firestore_db.collection("top_20").document(top_20_doc).get()
+        return return_dict
 
-                if firebase_doc.exists:
-                    return firebase_doc.to_dict()
-                else:
-                    return "This document does not exist in top_20", 400
-            else:
-                return "The top_20 object must be a string", 400
+
+    return "invalid HTTPS method"

@@ -13,6 +13,25 @@ code {
     monospace;
 }
 
+.imgContainer {
+  width: 250px;
+  height: 250px;
+  align-items: center;
+}
+
+.imgContainer a:hover ~  p {
+  opacity: 0;
+}
+
+.imgContainer img:hover {
+  width: 100%;
+  height: auto;
+}
+
+.sidebar {
+  background-color: #ffebaa;
+}
+
 /* loading spinner styles */
 .loader-div {
   position: absolute;
