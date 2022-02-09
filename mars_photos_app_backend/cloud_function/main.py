@@ -1,8 +1,6 @@
-import json
-import requests
 from flask import escape, Flask
 from datetime import datetime, timedelta
-from google.cloud import storage, firestore
+from google.cloud import firestore
 from flask_cors import cross_origin
 firestore_db = firestore.Client()
 

@@ -4,7 +4,6 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
-import json
 import requests
 from google.cloud import storage, firestore
 firestore_db = firestore.Client()
@@ -60,8 +59,9 @@ def get_images_by_camera(earth_date):
     processed_photos = {}
     for photo in unprocessed_photos:
         camera_name = photo["camera"]["name"]
+        # if the camera name is a key in processed_photos, then we add it, and make it's value equal to an array of urls.
+        # Otherwise we append the url to the array of urls
         if camera_name in processed_photos:
-            # if the camera name is not a key in processed_photos, then we add, and make it's value equal to an array of urls
             processed_photos[camera_name].append(photo["img_src"]) 
         else:
             processed_photos[camera_name] = [photo["img_src"]]
@@ -93,6 +93,7 @@ def make_predictions(earth_date=None, model=None):
     if model==None:
         model = load_model("model.pth")
 
+    # if the earth_date is not specified, we get the most recent date for which photos are available from the NASA API
     if earth_date==None:
         response = requests.get("https://api.nasa.gov/mars-photos/api/v1/manifests/curiosity?&api_key=DEMO_KEY")
         earth_date = ast.literal_eval( response.content.decode("UTF-8") )['photo_manifest']['max_date']
@@ -153,10 +154,14 @@ def check_top_20(firestore_obj, camera_name, earth_date):
 # The function makes predictions on all URLs in api_obj, then adds those predictions to firestore_obj. It returns firestore_obj.
 def get_camera_predictions(camera_name, firestore_obj, api_obj, model, earth_date):
     firestore_obj[camera_name] = []
+
+    # loop through all of the urls in api_obj, make predictions on them, then append them to firestore_obj[camera_name]
     for url in api_obj[camera_name]:
         image = Image.open(requests.get(url, stream=True).raw)
-        if image.size[0] > 200 and image.size[1] > 200:
+        if image.size[0] > 200 and image.size[1] > 200: # we only consider images with a size of more than 200x200, because smaller images look bad
             firestore_obj[camera_name].append( {"url":url, "score":predict_image_score(image, model)} )
+
+    # sort the images in firestore_obj[camera_name] from highest to lowest score
     firestore_obj[camera_name] = sorted(firestore_obj[camera_name], key = lambda x: x["score"], reverse=True)
     log.info("Finished getting predictions on camera: " + camera_name + " for date: " + earth_date)
     check_top_20(firestore_obj, camera_name, earth_date)
@@ -180,7 +185,7 @@ def update_camera_predictions(camera_name, firestore_obj, api_obj, model, earth_
     firestore_obj[camera_name] = sorted(firestore_obj[camera_name], key = lambda x: x["score"], reverse=True)
     new_photos[camera_name] = sorted(new_photos[camera_name], key = lambda x: x["score"], reverse=True)
     log.info("Finished updating predictions on camera: " + camera_name + " for date: " + earth_date)
-    check_top_20(new_photos, camera_name, earth_date)
+    check_top_20(new_photos, camera_name, earth_date) # notice that here, we're only calling the function with the new photos
     return firestore_obj
 
 # this function makes predictions on all photos on the most recent date, then looks at the previous five days and 
@@ -194,8 +199,11 @@ def update_firestore_db():
     model = load_model("model.pth")
 
     log.info("Making new prediction on date: " + earth_date)
-    make_predictions(earth_date, model)
+    make_predictions(earth_date, model) # making predictions on the latest date for which photos are available
 
+    # I've noticed that often NASA will only make certain photos available for the most recent date,
+    # then later on they'll add more photos for the same date. This function checks if there are any new photos 
+    # for the past 5 days, and if so it adds them to the firestore db.
     for i in range(5):
         earth_date_obj = earth_date_obj - timedelta(days=1)
         earth_date = earth_date_obj.strftime("%Y-%m-%d")
